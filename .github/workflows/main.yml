@@ -89,7 +89,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_BASE_PATH: /fellowship-project/
+          VITE_BASE_PATH: /cicd/
         run: |
           cd frontend
           yarn install
