@@ -1,0 +1,343 @@
+name: FULL STACK DEVELOPMENT
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+permissions:
+  contents: write
+
+jobs:
+  backend1:
+    name: Backend1 Build and Push
+    runs-on: ubuntu-latest
+    # runs-on: label1
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Cache Backend1
+        uses: actions/cache@v3
+        with:
+          path: /Use
+          rs/sujan/Library/Caches/Yarn/v6
+          key: ${{ runner.os }}-backend1-yarn-${{ hashFiles('code/backend1/yarn.lock') }}
+
+      - name: Install backend1 dependencies
+        run: |
+          cd code/backend1
+          yarn install
+      - name: Build Backend1
+        run: |
+          cd code/backend1
+          yarn build
+
+      - name: Upload backend1 build
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend1-build
+          path: |
+            code/backend1/dist
+            code/backend1/node_modules
+  backend2:
+    name: Backend2 Build and Push
+    runs-on: ubuntu-latest
+    # runs-on: label2
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Cache Backend2
+        uses: actions/cache@v3
+        with:
+          path: /Users/sujan/Library/Caches/Yarn/v6
+          key: ${{ runner.os }}-backend2-yarn-${{ hashFiles('code/backend2/yarn.lock') }}
+
+      - name: Install backend2 dependencies
+        run: |
+          cd code/backend2
+          yarn install
+
+      - name: Build Backend2
+        run: |
+          cd code/backend2
+          yarn build
+
+      - name: Upload backend2 build
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend2-build
+          path: |
+            code/backend2/dist
+            code/backend2/node_modules
+
+  frontend:
+    name: Frontend Build and Push
+    runs-on: ubuntu-latest
+    # runs-on: label1
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Cache Frontend
+        uses: actions/cache@v3
+        with:
+          path: /Users/sujan/Library/Caches/Yarn/v6
+          key: ${{ runner.os }}-frontend-yarn-${{ hashFiles('code/frontend/yarn.lock') }}
+
+      - name: Install frontend dependencies
+        run: |
+          cd code/frontend
+          yarn install
+
+      - name: Build Frontend
+        run: |
+          cd code/frontend
+          yarn build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: |
+            # code/frontend
+            code/frontend/dist
+
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Backend1 Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./code/backend1
+          file: ./code/backend1/Dockerfile
+          push: true
+          tags: |
+            ${{secrets.DOCKER_USERNAME}}/backend1:latest
+            ${{secrets.DOCKER_USERNAME}}/backend1:${{github.sha}}
+
+
+      - name: Build and Push Backend2 Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./code/backend2
+          file: ./code/backend2/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/backend2:latest
+            ${{ secrets.DOCKER_USERNAME }}/backend2:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./code/frontend
+          file: ./code/frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/frontend:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+  deploy:
+    name: Deploy to Self (Fedora VM)
+    runs-on: ubuntu-latest
+    # runs-on: label2
+    needs: [backend1, backend2, frontend]
+    steps:
+      - name: Pull and Run Docker Containers
+        run: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/backend1:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/backend2:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+
+          docker stop backend1 || true && docker rm backend1 || true
+          docker stop backend2 || true && docker rm backend2 || true
+          docker stop frontend || true && docker rm frontend || true
+
+          docker run -d --name backend1 -p 3001:3000 ${{ secrets.DOCKER_USERNAME }}/backend1:latest
+          docker run -d --name backend2 -p 3002:3000 ${{ secrets.DOCKER_USERNAME }}/backend2:latest
+          docker run -d --name frontend -p 80:80 ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+
+  release:
+    name: Create github release
+    needs: [backend1, backend2, frontend]
+    runs-on: ubuntu-latest
+    # runs-on: label1
+    steps:
+      - name: create github release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: release-${{ github.sha }}
+          name: Release ${{ github.sha }}
+          body: |
+            Automated release from GitHub Actions.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-frontend:
+    name: Deploy Frontend to GitHub Pages
+    runs-on: ubuntu-latest
+    # runs-on: label1
+    needs: [frontend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: download frontend build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: .
+          # path: code/frontend/dist
+
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: code/frontend/dist/
+          # publish_dir: dist
+          publish_branch: gh-pages
+
+
+
+  db-migration:
+    name: databse migration
+    runs-on: ubuntu-latest
+    # runs-on: label1
+    if: github.event_name == 'workflow_dispatch' # this will let user manually triggered.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install migration dependencies
+        run: |
+          cd code/backend1
+          yarn install
+        # we are doing this again because this is another job. every job is independent
+
+      - name: Run Migrations
+        if: github.event.inputs.command == 'migrate'
+        run: |
+          cd code/backend1
+          yarn migrate:latest
+
+      - name: Rollback Migrations
+        if: github.event.inputs.command == 'rollback'
+        run: |
+          cd code/backend1
+          yarn migrate:rollback
+
+  security-scan:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    needs: frontend
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Trivy on Ubuntu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+          # if used macos, then use brew install trivy
+
+
+
+
+      - name: Create Trivy Output Directory
+        run: mkdir -p scan-results
+
+      - name: Run Trivy Scan for Backend1
+        run: |
+          trivy image --format template \
+            --template "$(trivy -h | grep 'html.tpl' | awk '{print $2}')" \
+            --output scan-results/backend1.html ${{ secrets.DOCKER_USERNAME }}/backend1:latest
+
+      - name: Run Trivy Scan for Backend2
+        run: |
+          trivy image --format template \
+            --template "$(trivy -h | grep 'html.tpl' | awk '{print $2}')" \
+            --output scan-results/backend2.html ${{ secrets.DOCKER_USERNAME }}/backend2:latest
+
+      - name: Run Trivy Scan for Frontend
+        run: |
+          trivy image --format template \
+            --template "$(trivy -h | grep 'html.tpl' | awk '{print $2}')" \
+            --output scan-results/frontend.html ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+
+      - name: Upload scan results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-results
+          path: scan-results
+
+
+  publish-scan:
+    name: Publish Trivy Scan to GitHub Pages /scan
+    runs-on: ubuntu-latest
+    needs: security-scan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download scan results
+        uses: actions/download-artifact@v4
+        with:
+          name: scan-results
+          path: scan-results
+
+      - name: Prepare GitHub Pages content
+        run: |
+          mkdir public
+          mv scan-results/* public/
+          touch public/.nojekyll  # Prevent GitHub from processing files via Jekyll
+
+      - name: Deploy to gh-pages-scan branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages-scan
+          publish_dir: public

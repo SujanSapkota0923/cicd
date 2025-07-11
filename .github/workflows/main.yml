@@ -1,0 +1,140 @@
+# 3. **Build and Deployment**
+
+#    * **Backend:**
+
+#      * Build the whole (backend and frontend) application implementing caching.
+#      * Upload the build artifacts to GitHub so they can be downloaded later.
+#      * Upload the images into dockerhub with proper tagging.
+#      * Deploy your application on a seprate VM and deploy the latest build images.
+#      * After code goes into the main branch create a github release based on the newest tagged version.
+
+#    * **Frontend:**
+
+#      * Build the frontend application and implement caching.
+#      * Deploy the built frontend site to **GitHub Pages** automatically. It should update everytime the frontend changes.
+
+#    * **Database
+
+#      * For your postgres database create a  database migration pipeline through Github Actions. It should be able to implement migrations and also rollback the migrations as well.(Manual triggers)
+name: FULL STACK DEVELOPMENT
+'on':
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: yarn
+      - name: Cache node modules - Frontend
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.cache/yarn
+          key: >-
+            ${{ runner.os }}-build-${{ env.cache-name
+            }}-${{hashFiles('**/package-lock.json') }}
+          restore-keys: >
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+
+            ${{ runner.os }}-build-
+
+            ${{ runner.os }}-build-${{ env.cache-name
+            }}-${{hashFiles('**/package-lock.json') }}
+      - name: Install dependencies of Frontend
+        run: |
+          cd frontend
+          yarn install
+      - name: Build Frontend
+        run: |
+          cd frontend
+          yarn run build
+      - name: upload Frontend build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: |
+            frontend-build
+            path: frontend/build
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: yarn
+      - name: Cache node modules - Backend1
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.cache/yarn
+          key: >-
+            ${{ runner.os }}-build-${{ env.cache-name
+            }}-${{hashFiles('**/package-lock.json') }}
+          restore-keys: >
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+
+            ${{ runner.os }}-build-
+
+            ${{ runner.os }}-build-${{ env.cache-name
+            }}-${{hashFiles('**/package-lock.json') }}
+      - name: Install dependencies of Backend1
+        run: |
+          cd backend1
+          yarn   
+      - name: Build Backend1
+        run: |
+          cd backend1
+          yarn build
+      - name: upload Backend1 build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend1-build
+          path: |
+            backend1/dist
+            backend1/node_modules
+  backend2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: yarn
+      - name: Cache node modules - Backend2
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.cache/yarn
+          key: >-
+            ${{ runner.os }}-build-${{ env.cache-name
+            }}-${{hashFiles('**/package-lock.json') }}
+          restore-keys: >
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+
+            ${{ runner.os }}-build-
+
+            ${{ runner.os }}-build-${{ env.cache-name
+            }}-${{hashFiles('**/package-lock.json') }}
