@@ -36,6 +36,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -57,10 +58,11 @@ jobs:
 
             ${{ runner.os }}-build-${{ env.cache-name
             }}-${{hashFiles('**/package-lock.json') }}
+
       - name: Install dependencies of Frontend
-        run: |
-          cd frontend
-          yarn install
+        working-directory: frontend
+        run: yarn install
+
       - name: Build Frontend
         run: |
           cd frontend

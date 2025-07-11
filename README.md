@@ -416,3 +416,5 @@ jobs:
           ssh -i './1sshkey' ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           echo "hello world" >> hello.txt
           EOF
+
+fa
