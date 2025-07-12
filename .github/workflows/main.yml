@@ -1,3 +1,54 @@
+# ### **Requirements**
+
+# 1. **Self-Hosted Runners**
+
+#    * Configure **two separate self-hosted runners**:
+
+#      * One dedicated to building the backend.
+#      * One dedicated to building the frontend.
+#    * Ensure each workflow uses the correct runner.
+
+# 2. **Selective Workflow Triggers**
+
+#    * Workflows must **only trigger** when changes occur in their respective directories (`frontend/` or `backend/`).
+#    * Changes to non-code files (e.g., `README.md`) must **not trigger any builds**.
+
+# 3. **Build and Deployment**
+
+#    * **Backend:**
+
+#      * Build the whole (backend and frontend) application implementing caching.
+#      * Upload the build artifacts to GitHub so they can be downloaded later.
+#      * Upload the images into dockerhub with proper tagging.
+#      * Deploy your application on a seprate VM and deploy the latest build images.
+#      * After code goes into the main branch create a github release based on the newest tagged version. --------
+
+#    * **Frontend:**
+
+#      * Build the frontend application and implement caching.
+#      * Deploy the built frontend site to **GitHub Pages** automatically. It should update everytime the frontend changes.
+
+#    * **Database
+
+#      * For your postgres database create a  database migration pipeline through Github Actions. It should be able to implement migrations and also rollback the migrations as well.(Manual triggers) ------
+
+
+# 4. **Security Scanning**
+
+#    * Integrate a **Trivy security scan** for your application or Docker images.
+#    * Generate an **HTML report** of the scan results.
+#    * Publish the report in **GitHub Pages** under a separate path such as `/scan`.
+
+
+# Document should be well written.
+
+# 5. **More Task**
+
+#    * In addition to the regular build artifacts:
+
+#      * Produce **Docker image exports** of both the frontend and backend applications.
+#      * Publish the exports as downloadable artifacts.
+#    * Update the deployed frontend site to include a **download button or link** that allows users to download these artifacts easily.
 name: FULL STACK CI/CD
 
 permissions:
@@ -119,7 +170,7 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: ${{ env.IMAGE_TAG }} 
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64 # for multi-arch support
           cache-from: type=local,src=/tmp/.cachebuild
           cache-to: type=local,dest=/tmp/.cachebuild-new
 
@@ -234,6 +285,53 @@ jobs:
           name: trivy-report-backend2
           path: backend2-trivy-report.html
 
+  # upload-trivy-reports:
+  #   needs:
+  #     - trivy-scan-backend1
+  #     - trivy-scan-backend2
+  #     - trivy-scan-frontend
+  #     - changes
+  #   if: always()
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         path: artifacts
+
+  #     - name: prepare report directory
+  #       run: mkdir -p gh-pages/trivy-report
+
+  #     - name: copy backend1 report  
+  #       if: needs.changes.outputs.backend1 == 'true'
+  #       run: |
+  #         mkdir -p gh-pages/trivy-report/backend1
+  #         cp artifacts/trivy-report-backend1/backend1-trivy-report.html gh-pages/trivy-report/backend1/index.html
+
+  #     - name: copy backend2 report    
+  #       if: needs.changes.outputs.backend2 == 'true'
+  #       run: |
+  #         mkdir -p gh-pages/trivy-report/backend2
+  #         cp artifacts/trivy-report-backend2/backend2-trivy-report.html gh-pages/trivy-report/backend2/index.html
+
+  #     - name: copy frontend report    
+  #       if: needs.changes.outputs.frontend == 'true'
+  #       run: |
+  #         mkdir -p gh-pages/trivy-report/frontend
+  #         cp artifacts/trivy-report-frontend/frontend-trivy-report.html gh-pages/trivy-report/frontend/index.html
+
+  #     - name: Commit and push Trivy reports
+  #       run: |
+  #         git config --global user.name "github-actions[bot]"
+  #         git config --global user.email "github-actions[bot]@users.noreply.github.com"
+  #         git fetch origin gh-pages || true
+  #         git switch gh-pages
+  #         cp -r gh-pages/* .
+  #         git add trivy-report
+  #         git commit -m "chore(report): update trivy reports" || echo "No changes"
+  #         git push origin gh-pages
+
   upload-trivy-reports:
     needs:
       - trivy-scan-backend1
@@ -243,44 +341,34 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: prepare report directory
-        run: mkdir -p gh-pages/trivy-report
-
-      - name: copy backend1 report  
-        if: needs.changes.outputs.backend1 == 'true'
+      - name: Prepare Trivy report directory
         run: |
-          mkdir -p gh-pages/trivy-report/backend1
-          cp artifacts/trivy-report-backend1/backend1-trivy-report.html gh-pages/trivy-report/backend1/index.html
+          mkdir -p public/scan/frontend
+          mkdir -p public/scan/backend1
+          mkdir -p public/scan/backend2
 
-      - name: copy backend2 report    
-        if: needs.changes.outputs.backend2 == 'true'
-        run: |
-          mkdir -p gh-pages/trivy-report/backend2
-          cp artifacts/trivy-report-backend2/backend2-trivy-report.html gh-pages/trivy-report/backend2/index.html
+          if [ -f artifacts/trivy-report-frontend/frontend-trivy-report.html ]; then
+            cp artifacts/trivy-report-frontend/frontend-trivy-report.html public/scan/frontend/index.html
+          fi
 
-      - name: copy frontend report    
-        if: needs.changes.outputs.frontend == 'true'
-        run: |
-          mkdir -p gh-pages/trivy-report/frontend
-          cp artifacts/trivy-report-frontend/frontend-trivy-report.html gh-pages/trivy-report/frontend/index.html
+          if [ -f artifacts/trivy-report-backend1/backend1-trivy-report.html ]; then
+            cp artifacts/trivy-report-backend1/backend1-trivy-report.html public/scan/backend1/index.html
+          fi
 
-      - name: Commit and push Trivy reports
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin gh-pages || true
-          git switch gh-pages
-          cp -r gh-pages/* .
-          git add trivy-report
-          git commit -m "chore(report): update trivy reports" || echo "No changes"
-          git push origin gh-pages
+          if [ -f artifacts/trivy-report-backend2/backend2-trivy-report.html ]; then
+            cp artifacts/trivy-report-backend2/backend2-trivy-report.html public/scan/backend2/index.html
+          fi
 
+      - name: Deploy Trivy reports to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          destination_dir: .  # root of Pages, so /scan is accessible
   backend1:
     needs: [changes, testing, set-vars]
     if: needs.changes.outputs.backend1 == 'true'
