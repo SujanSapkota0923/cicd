@@ -345,6 +345,7 @@ jobs:
             echo "IMAGE_TAG=${{ secrets.DOCKER_HUB_USERNAME }}/blogapp-backend2:dev-${{ needs.set-vars.outputs.short_sha }}" >> $GITHUB_ENV
           fi
 
+
       - name: Build and push backend2 image
         uses: docker/build-push-action@v5
         with:
