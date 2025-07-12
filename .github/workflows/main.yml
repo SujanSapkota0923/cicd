@@ -102,7 +102,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Setup docker buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3 
 
       - name: Set frontend image tag
         run: |
@@ -119,6 +119,7 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: ${{ env.IMAGE_TAG }} 
+          platforms: linux/amd64,linux/arm64
           cache-from: type=local,src=/tmp/.cachebuild
           cache-to: type=local,dest=/tmp/.cachebuild-new
 
@@ -312,6 +313,8 @@ jobs:
           file: ./backend1/Dockerfile
           push: true
           tags: ${{ env.IMAGE_TAG }}
+          platforms: linux/amd64,linux/arm64
+
           cache-from: type=local,src=/tmp/.cachebuild
           cache-to: type=local,dest=/tmp/.cachebuild-new
 
@@ -352,6 +355,8 @@ jobs:
           file: ./backend2/Dockerfile
           push: true
           tags: ${{ env.IMAGE_TAG }}
+          platforms: linux/amd64,linux/arm64
+
           cache-from: type=local,src=/tmp/.cachebuild
           cache-to: type=local,dest=/tmp/.cachebuild-new
 
@@ -392,6 +397,7 @@ jobs:
           file: ./db/Dockerfile
           push: true
           tags: ${{ env.IMAGE_TAG }}
+          platforms: linux/amd64,linux/arm64
           cache-from: type=local,src=/tmp/.cachebuild
           cache-to: type=local,dest=/tmp/.cachebuild-new
 
