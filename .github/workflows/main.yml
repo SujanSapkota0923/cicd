@@ -400,45 +400,45 @@ jobs:
           rm -rf /tmp/.cachebuild
           mv /tmp/.cachebuild-new /tmp/.cachebuild
 
-#   deployment:
-#     needs:
-#       - set-vars
-#       - frontend
-#       - backend1
-#       - backend2
-#       - changes
-#       - trivy-scan-frontend
-#     runs-on: [v3] # ----------------------------------------------------
-#     if: needs.changes.outputs.frontend == 'true'
+  deployment:
+    needs:
+      - set-vars
+      - frontend
+      - backend1
+      - backend2
+      - changes
+      - trivy-scan-frontend
+    runs-on: [label1] 
+    if: needs.changes.outputs.frontend == 'true'
 
-#     steps:
-#       - name: ssh and deploy
-#         run: |
-#           echo "${{ secrets.SSH_KEY }}" > 1sshkey
-#           chmod 600 1sshkey
-#           ssh -i './1sshkey' ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-#           echo "hello world" >> hello.txt
-#           export TAG=${{ needs.set-vars.outputs.short_sha }}
-#           docker pull pratik12321/blogapp-backend2:prod-$TAG
-#           docker pull pratik12321/blogapp-backend1:prod-$TAG
-#           docker pull pratik12321/blogapp-frontend:prod-$TAG
+    steps:
+      - name: ssh and deploy
+        run: |
+          echo "${{ secrets.SSH_KEY }}" > 1sshkey
+          chmod 600 1sshkey
+          ssh -i './1sshkey' ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          echo "hello world" >> hello.txt
+          export TAG=${{ needs.set-vars.outputs.short_sha }}
+          docker pull sujan0923/blogapp-backend2:prod-$TAG
+          docker pull sujan0923/blogapp-backend1:prod-$TAG
+          docker pull sujan0923/blogapp-frontend:prod-$TAG
           
-#           docker rm -f backend1 backend2 frontend || true
+          docker rm -f backend1 backend2 frontend || true
           
-#           docker network create backend-network || true
+          docker network create backend-network || true
           
-#           docker run -d --name backend1 \
-#           --network backend-network \
-#           -p 3000:3000 \
-#           pratik12321/blogapp-backend1:prod-$TAG
+          docker run -d --name backend1 \
+          --network backend-network \
+          -p 3000:3000 \
+          sujan0923/blogapp-backend1:prod-$TAG
 
-#           docker run -d --name backend2 \
-#           --network backend-network \
-#           -p 3001:3001 \
-#           pratik12321/blogapp-backend2:prod-$TAG
+          docker run -d --name backend2 \
+          --network backend-network \
+          -p 3001:3001 \
+          sujan0923/blogapp-backend2:prod-$TAG
 
-#           docker run -d --name frontend \
-#           --network backend-network \
-#           -p 5173:5173 \
-#           pratik12321/blogapp-frontend:prod-$TAG
-#           EOF
+          docker run -d --name frontend \
+          --network backend-network \
+          -p 5173:5173 \
+          sujan0923/blogapp-frontend:prod-$TAG
+          EOF
