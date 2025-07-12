@@ -285,53 +285,6 @@ jobs:
           name: trivy-report-backend2
           path: backend2-trivy-report.html
 
-  # upload-trivy-reports:
-  #   needs:
-  #     - trivy-scan-backend1
-  #     - trivy-scan-backend2
-  #     - trivy-scan-frontend
-  #     - changes
-  #   if: always()
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - uses: actions/download-artifact@v4
-  #       with:
-  #         path: artifacts
-
-  #     - name: prepare report directory
-  #       run: mkdir -p gh-pages/trivy-report
-
-  #     - name: copy backend1 report  
-  #       if: needs.changes.outputs.backend1 == 'true'
-  #       run: |
-  #         mkdir -p gh-pages/trivy-report/backend1
-  #         cp artifacts/trivy-report-backend1/backend1-trivy-report.html gh-pages/trivy-report/backend1/index.html
-
-  #     - name: copy backend2 report    
-  #       if: needs.changes.outputs.backend2 == 'true'
-  #       run: |
-  #         mkdir -p gh-pages/trivy-report/backend2
-  #         cp artifacts/trivy-report-backend2/backend2-trivy-report.html gh-pages/trivy-report/backend2/index.html
-
-  #     - name: copy frontend report    
-  #       if: needs.changes.outputs.frontend == 'true'
-  #       run: |
-  #         mkdir -p gh-pages/trivy-report/frontend
-  #         cp artifacts/trivy-report-frontend/frontend-trivy-report.html gh-pages/trivy-report/frontend/index.html
-
-  #     - name: Commit and push Trivy reports
-  #       run: |
-  #         git config --global user.name "github-actions[bot]"
-  #         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-  #         git fetch origin gh-pages || true
-  #         git switch gh-pages
-  #         cp -r gh-pages/* .
-  #         git add trivy-report
-  #         git commit -m "chore(report): update trivy reports" || echo "No changes"
-  #         git push origin gh-pages
-
   upload-trivy-reports:
     needs:
       - trivy-scan-backend1
@@ -341,34 +294,81 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Prepare Trivy report directory
+      - name: prepare report directory
+        run: mkdir -p gh-pages/trivy-report
+
+      - name: copy backend1 report  
+        if: needs.changes.outputs.backend1 == 'true'
         run: |
-          mkdir -p public/scan/frontend
-          mkdir -p public/scan/backend1
-          mkdir -p public/scan/backend2
+          mkdir -p gh-pages/trivy-report/backend1
+          cp artifacts/trivy-report-backend1/backend1-trivy-report.html gh-pages/trivy-report/backend1/index.html
 
-          if [ -f artifacts/trivy-report-frontend/frontend-trivy-report.html ]; then
-            cp artifacts/trivy-report-frontend/frontend-trivy-report.html public/scan/frontend/index.html
-          fi
+      - name: copy backend2 report    
+        if: needs.changes.outputs.backend2 == 'true'
+        run: |
+          mkdir -p gh-pages/trivy-report/backend2
+          cp artifacts/trivy-report-backend2/backend2-trivy-report.html gh-pages/trivy-report/backend2/index.html
 
-          if [ -f artifacts/trivy-report-backend1/backend1-trivy-report.html ]; then
-            cp artifacts/trivy-report-backend1/backend1-trivy-report.html public/scan/backend1/index.html
-          fi
+      - name: copy frontend report    
+        if: needs.changes.outputs.frontend == 'true'
+        run: |
+          mkdir -p gh-pages/trivy-report/frontend
+          cp artifacts/trivy-report-frontend/frontend-trivy-report.html gh-pages/trivy-report/frontend/index.html
 
-          if [ -f artifacts/trivy-report-backend2/backend2-trivy-report.html ]; then
-            cp artifacts/trivy-report-backend2/backend2-trivy-report.html public/scan/backend2/index.html
-          fi
+      - name: Commit and push Trivy reports
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages || true
+          git switch gh-pages
+          cp -r gh-pages/* .
+          git add trivy-report
+          git commit -m "chore(report): update trivy reports" || echo "No changes"
+          git push origin gh-pages
 
-      - name: Deploy Trivy reports to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
-          destination_dir: .  # root of Pages, so /scan is accessible
+  # upload-trivy-reports:
+  #   needs:
+  #     - trivy-scan-backend1
+  #     - trivy-scan-backend2
+  #     - trivy-scan-frontend
+  #     - changes
+  #   if: always()
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         path: artifacts
+
+  #     - name: Prepare Trivy report directory
+  #       run: |
+  #         mkdir -p public/scan/frontend
+  #         mkdir -p public/scan/backend1
+  #         mkdir -p public/scan/backend2
+
+  #         if [ -f artifacts/trivy-report-frontend/frontend-trivy-report.html ]; then
+  #           cp artifacts/trivy-report-frontend/frontend-trivy-report.html public/scan/frontend/index.html
+  #         fi
+
+  #         if [ -f artifacts/trivy-report-backend1/backend1-trivy-report.html ]; then
+  #           cp artifacts/trivy-report-backend1/backend1-trivy-report.html public/scan/backend1/index.html
+  #         fi
+
+  #         if [ -f artifacts/trivy-report-backend2/backend2-trivy-report.html ]; then
+  #           cp artifacts/trivy-report-backend2/backend2-trivy-report.html public/scan/backend2/index.html
+  #         fi
+
+  #     - name: Deploy Trivy reports to GitHub Pages
+  #       uses: peaceiris/actions-gh-pages@v3
+  #       with:
+  #         github_token: ${{ secrets.GITHUB_TOKEN }}
+  #         publish_dir: ./public
+  #         destination_dir: .  # root of Pages, so /scan is accessible
   backend1:
     needs: [changes, testing, set-vars]
     if: needs.changes.outputs.backend1 == 'true'
