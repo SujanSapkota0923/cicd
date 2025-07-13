@@ -55,6 +55,7 @@ def update_readme(directory):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     update_line = f"\n<!-- Updated on {timestamp} -->\n"
 
+
     if os.path.isdir(directory):
         print(f"Directory {directory} found.")
     else:
@@ -71,6 +72,8 @@ def update_readme(directory):
     
 
 if __name__ == "__main__":
+    print("Starting the script...")
+    print(f'-------------{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}-------------')
     for dir_name in directories:
         update_readme(dir_name)
 
