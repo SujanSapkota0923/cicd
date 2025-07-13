@@ -184,6 +184,17 @@ jobs:
         run: |
           rm -rf /tmp/.cachebuild
           mv /tmp/.cachebuild-new /tmp/.cachebuild
+          
+      - name: Get Semantic Version
+        id: semver_frontend
+        uses: mathieudutour/github-tag-action@v6.0
+        with:
+          github_token: '${{ secrets.GITHUB_TOKEN }}'
+          release_branches: main
+          tag_prefix: frontend-v
+          create_annotated_tag: true
+          dry_run: false
+          default_bump: patch
 
   deploy-frontend-pages:
     if: github.ref_name == 'main'
