@@ -129,7 +129,30 @@ jobs:
         uses: webiny/action-conventional-commits@v1.3.0
         with:
           allowed-commit-types: "feat,fix,docs,style,refactor,test,chore,ci,perf,revert"
+  
+  release:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+        
   frontend:
     needs: [changes, testing, set-vars]
     if: needs.changes.outputs.frontend == 'true'
@@ -500,3 +523,6 @@ jobs:
           -p 5173:5173 \
           sujan0923/blogapp-frontend:prod-$TAG
           EOF
+
+
+  
