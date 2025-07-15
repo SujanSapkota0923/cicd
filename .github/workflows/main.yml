@@ -495,8 +495,8 @@ jobs:
       - name: Checkout GitHub Pages repo
         uses: actions/checkout@v4
         with:
-          repository: ${{ env.PAGES_REPO }}
-          token: SujanSapkota0923/cicd/
+          repository: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: pages-repo
 
       - name: Copy Semgrep HTML report to GitHub Pages repo
