@@ -50,7 +50,7 @@ rules:
     languages: [typescript]
     severity: WARNING
 
-  - id: sql-string-concat
-    pattern: connection.query("SELECT * FROM users WHERE id = " + $ID)
-    message: don't use this here
-    la
+  # - id: sql-string-concat
+  #   pattern: connection.query("SELECT * FROM users WHERE id = " + $ID)
+  #   message: don't use this here
+  #   la
