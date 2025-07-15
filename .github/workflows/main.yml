@@ -497,7 +497,7 @@ jobs:
         with:
           repository: ${{ github.repository }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          pa
+          path: pages-repo
 
       - name: Copy Semgrep HTML report to GitHub Pages repo
         run: |
