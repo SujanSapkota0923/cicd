@@ -497,7 +497,7 @@ jobs:
         with:
           repository: ${{ github.repository }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          path: pages-repo
+          pa
 
       - name: Copy Semgrep HTML report to GitHub Pages repo
         run: |
@@ -510,8 +510,25 @@ jobs:
           cd pages-repo
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
+
+          # Check if there are changes to commit
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
           git add scan/semgrep/index.html
-          git commit -m "Update Semgrep scan report"
-          git push origin main
+
+          git commit -m "Update Semgrep scan report" || { echo "Nothing to commit"; exit 0; }
+
+          # Check current branch
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "Current branch is $BRANCH"
+
+          if [ "$BRANCH" != "gh-pages" ] && [ "$BRANCH" != "main" ]; then
+            echo "Error: pushing to unexpected branch: $BRANCH"
+            exit 1
+          fi
+
+          git push origin $BRANCH || { echo "Failed to push to origin $BRANCH"; exit 1; }
         shell: bash
-      
