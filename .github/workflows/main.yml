@@ -1,54 +1,4 @@
-# ### **Requirements**
 
-# 1. **Self-Hosted Runners**
-
-#    * Configure **two separate self-hosted runners**:
-
-#      * One dedicated to building the backend.
-#      * One dedicated to building the frontend.
-#    * Ensure each workflow uses the correct runner.
-
-# 2. **Selective Workflow Triggers**
-
-#    * Workflows must **only trigger** when changes occur in their respective directories (`frontend/` or `backend/`).
-#    * Changes to non-code files (e.g., `README.md`) must **not trigger any builds**.
-
-# 3. **Build and Deployment**
-
-#    * **Backend:**
-
-#      * Build the whole (backend and frontend) application implementing caching.
-#      * Upload the build artifacts to GitHub so they can be downloaded later.
-#      * Upload the images into dockerhub with proper tagging.
-#      * Deploy your application on a seprate VM and deploy the latest build images.
-#      * After code goes into the main branch create a github release based on the newest tagged version. --------
-
-#    * **Frontend:**
-
-#      * Build the frontend application and implement caching.
-#      * Deploy the built frontend site to **GitHub Pages** automatically. It should update everytime the frontend changes.
-
-#    * **Database
-
-#      * For your postgres database create a  database migration pipeline through Github Actions. It should be able to implement migrations and also rollback the migrations as well.(Manual triggers) ------
-
-
-# 4. **Security Scanning**
-
-#    * Integrate a **Trivy security scan** for your application or Docker images.
-#    * Generate an **HTML report** of the scan results.
-#    * Publish the report in **GitHub Pages** under a separate path such as `/scan`.
-
-
-# Document should be well written.
-
-# 5. **More Task**
-
-#    * In addition to the regular build artifacts:
-
-#      * Produce **Docker image exports** of both the frontend and backend applications.
-#      * Publish the exports as downloadable artifacts.
-#    * Update the deployed frontend site to include a **download button or link** that allows users to download these artifacts easily.
 name: FULL STACK CI/CD
 
 permissions:
@@ -140,7 +90,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_BASE_PATH: /cicd/
+          VITE_BASE_PATH: /cicd/      # ------------------------# ------------------------# ------------------------
         run: |
           cd frontend
           yarn install
@@ -149,8 +99,8 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+          username: ${{ secrets.DOCKER_HUB_USERNAME }} # ------------------------# ------------------------# ------------------------
+          password: ${{ secrets.DOCKER_HUB_TOKEN }} # ------------------------# ------------------------# ------------------------
 
       - name: Setup docker buildx
         uses: docker/setup-buildx-action@v3 
@@ -171,8 +121,8 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_TAG }} 
           platforms: linux/amd64,linux/arm64 # for multi-arch support
-          cache-from: type=local,src=/tmp/.cachebuild
-          cache-to: type=local,dest=/tmp/.cachebuild-new
+          cache-from: type=local,src=/tmp/.cachebuild # ------------------------  # ------------------------# ------------------------
+          cache-to: type=local,dest=/tmp/.cachebuild-new  # ------------------------  # ------------------------# ------------------------
 
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
@@ -512,3 +462,56 @@ jobs:
           sujan0923/blogapp-frontend:prod-$TAG
           EOF
   
+  scan-and-publish-semgrep-report:
+    name: Scan and Publish Semgrep Report
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Semgrep and json2html
+        run: |
+          pip install semgrep json2html
+        shell: bash
+
+      - name: Run Semgrep scan
+        run: |
+          semgrep --json  --config semgrep.yaml . >> semgrep-results.json || true
+        shell: bash
+
+      - name: Convert JSON to HTML
+        run: |
+          python3 -c "import json; from json2html import json2html; print(json2html.convert(json=json.load(open('semgrep-results.json'))))" > semgrep-report.html
+        shell: bash
+
+
+      - name: Checkout GitHub Pages repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PAGES_REPO }}
+          token: ${{ env.PAGES_TOKEN }}
+          path: pages-repo
+
+      - name: Copy Semgrep HTML report to GitHub Pages repo
+        run: |
+          mkdir -p pages-repo/scan/semgrep
+          cp semgrep-report.html pages-repo/scan/semgrep/index.html
+        shell: bash
+
+      - name: Commit and push to GitHub Pages
+        run: |
+          cd pages-repo
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add scan/semgrep/index.html
+          git commit -m "Update Semgrep scan report"
+          git push origin main
+        shell: bash
+      

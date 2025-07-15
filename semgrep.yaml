@@ -1,0 +1,56 @@
+rules:
+  - id: eval
+    pattern: eval($EXPR)
+    message: don't use this here
+    languages: [typescript]
+    severity: ERROR
+
+  - id: hardcoded-secret
+    pattern: const $VAR = "$SECRET"
+    message: don't use this here
+    languages: [typescript]
+    severity: WARNING
+
+  - id: dangerously-set-innerhtml
+    pattern: "dangerouslySetInnerHTML={{ __html: $HTML }}"
+    message: don't use this here
+    languages: [typescript]
+    severity: WARNING
+
+  - id: require-import
+    pattern: require($MODULE)
+    message: don't use this here
+    languages: [typescript]
+    severity: INFO
+
+  - id: async-no-await
+    pattern: |
+      async function $FUNC(...) {
+        $CALL();
+      }
+    message: don't use this here
+    languages: [typescript]
+    severity: WARNING
+
+  - id: open-cors
+    pattern: app.use(cors())
+    message: don't use this here
+    languages: [typescript]
+    severity: WARNING
+
+  - id: http-server
+    pattern: http.createServer(...)
+    message: don't use this here
+    languages: [typescript]
+    severity: WARNING
+
+  - id: expose-stacktrace
+    pattern: res.send(err.stack)
+    message: don't use this here
+    languages: [typescript]
+    severity: WARNING
+
+  - id: sql-string-concat
+    pattern: connection.query("SELECT * FROM users WHERE id = " + $ID)
+    message: don't use this here
+    la
